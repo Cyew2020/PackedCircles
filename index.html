@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Packed Circles with D3.js</title>
+	<style>
+		html, body {
+			padding: 0;
+			margin: 0;
+			box-sizing: border-box;
+			font-family: Helvetica, Calibri, Roboto, Open Sans, sans-serif
+			-webkit-backface-visibility: hidden;
+		}
+		* {
+			box-sizing: inherit;
+		}
+		h1 {
+			text-align: center;
+		}
+		svg {
+			margin:auto;
+			display:block;
+		}
+
+		.circle-overlay {
+			font-size: 16px;
+			border-radius: 50%;
+			position: absolute;
+			overflow: hidden;
+			/*it's buggy with the foreignObject background right now*/
+			/*background-color: rgba(255,255,255,0.5);*/
+		}
+		.circle-overlay__inner {
+			text-align: center;
+			width: 100%;
+			height: 100%;
+		}
+
+		.hidden {
+			display: none;
+		}
+		.node-icon--faded {
+			opacity: 0.5;
+		}
+		.legend-size circle {
+			fill: rgb(31, 119, 180);
+		}
+	</style>
+</head>
+<body>
+	<h1>Packed Circles with D3.js</h1>
+	<svg width="100%" height="900" font-family="sans-serif" font-size="10" text-anchor="middle"></svg>
+
+	<script src="js/d3.min.js"></script>
+	<script src="js/d3-legend.min.js"></script>
+	<script>
+		// Based loosely from this D3 bubble graph https://bl.ocks.org/mbostock/4063269
+		// And this Forced directed diagram https://bl.ocks.org/mbostock/4062045
+		let data = [{
+			cat: 'cat11', name: 'blogdown', value: 150,
+			icon: 'img/blogdown.svg',
+			desc: `
+				Creating Websites with<br>R Markdown.
+			`
+		}, {
+			cat: 'cat1', name: 'broom', value: 100,
+			icon: 'img/broom.svg',
+			desc: `
+				Takes the messy output<br>of built-in functions in R, such<br>as lm, nls, or t. test,<br>and turns them into tidy tibbles.
+			`
+		}, {
+			cat: 'cat10', name: 'devtools', value: 120,
+			icon: 'img/devtools.svg',
+			desc: `
+				Tools to Make Developing<br>R Packages Easier.
+			`
+		}, {
+			cat: 'cat9', name: 'dplyr', value: 250,
+			icon: 'img/dplyr.svg',
+			desc: `
+				dplyr is a grammar<br>of data manipulation, providing<br>a consistent set of verbs that<br>help you solve the most common<br>data manipulation challenges.
+			`
+		}, {
+			cat: 'cat1', name: 'feather', value: 100,
+			icon: 'img/feather.svg',
+			desc: `
+				Read and write feather files,<br>a lightweight binary columnar data<br>store designed for maximum speed.
+			`
+		}, {
+			cat: 'cat2', name: 'flexdashboard', value: 150,
+			icon: 'img/flexdashboard.svg',
+			desc: `
+				R Markdown Format for Flexible Dashboards.
+			`
+		}, {
+			cat: 'cat12', name: 'forcats', value: 150,
+			icon: 'img/forcats.svg',
+			desc: `
+				Tools for Working with Categorical Variables (Factors).
+			`
+		}, {
+			cat: 'cat6', name: 'furrr', value: 100,
+			icon: 'img/furrr.svg',
+			desc: `
+				Apply Mapping Functions in<br>Parallel using Futures.
+			`
+		}, {
+			cat: 'cat7', name: 'ggplot2', value: 300,
+			icon: 'img/ggplot2.svg',
+			desc: `
+				Create Elegant Data Visualisations<br>Using the Grammar of Graphics.
+			`
+		}, /*{
+			cat: 'framework', name: 'Trails.JS', value: 10,
+			icon: '',
+		},*/ {
+			cat: 'cat2', name: 'glue', value: 150,
+			icon: 'img/glue.svg',
+			desc: `
+				glue offers interpreted string<br>literals that are small, fast,<br>and dependency-free.
+			`
+		}, {
+			cat: 'cat3', name: 'googledrive', value: 90,
+			icon: 'img/googledrive.svg',
+			desc: `
+				googledrive allows you to interact<br>with files on Google Drive from R.
+			`
+		}, {
+			cat: 'cat11', name: 'googlesheets4', value: 100,
+			icon: 'img/googlesheets4.svg',
+			desc: `
+				googlesheets4 provides an R interface<br>to Google Sheets via the Sheets API v4.
+			`
+		}, /*{
+			cat: 'framework', name: 'Foundation', value: 10,
+			icon: '',
+		},*/{
+			cat: 'cat12', name: 'gt', value: 180,
+			icon: 'img/gt.svg',
+			desc: `
+				Create Presentation-Ready Display Tables.
+			`
+		}, {
+			cat: 'cat5', name: 'haven', value: 200,
+			icon: 'img/haven.svg',
+			desc: `
+				read and write various data formats<br>used by other statistical packages.
+			`
+		}, /*{
+			cat: 'framework', name: 'SenchaTouch', value: 10,
+			icon: '',
+		},*/ {
+			cat: 'cat10', name: 'htmltools', value: 120,
+			icon: 'img/htmltools.svg',
+			desc: `
+				Tools for HTML generation<br>and output.
+			`
+		}, {
+			cat: 'cat3', name: 'knitr', value: 100,
+			icon: 'img/knitr.svg',
+			desc: `
+				Provides a general-purpose tool<br>for dynamic report generation in<br>R using Literate Programming techniques.
+			`
+		}, {
+			cat: 'cat11', name: 'lubridate', value: 150,
+			icon: 'img/lubridate.svg',
+			desc: `
+				provides tools that make it<br>easier to parse and manipulate dates.
+			`
+		}, {
+			cat: 'cat3', name: 'plumber', value: 90,
+			icon: 'img/plumber.svg',
+			desc: `
+				An API Generator for R.
+			`
+		}, {
+			cat: 'cat4', name: 'purrr', value: 180,
+			icon: 'img/purrr.svg',
+			desc: `
+				functional programming<br>toolkit for R.
+			`
+		}, {
+			cat: 'cat10', name: 'renv', value: 50,
+			icon: 'img/renv.svg',
+			desc: `
+				A dependency management<br>toolkit for R.
+			`
+		}, {
+			cat: 'cat11', name: 'r2d3', value: 80,
+			icon: 'img/r2d3.svg',
+			desc: `
+				Suite of tools for using D3.
+			`
+		}, {
+			cat: 'cat3', name: 'parsnip', value: 40,
+			icon: 'img/parsnip.svg',
+			desc: `
+				A Common API to Modeling and<br>Analysis Functions.
+			`
+		}, {
+			cat: 'cat4', name: 'readr', value: 70,
+			icon: 'img/readr.svg',
+			desc: `
+				Converting rectangular data into R.
+			`
+		}, {
+			cat: 'cat5', name: 'infer', value: 40,
+			icon: 'img/infer.svg',
+			desc: `
+				offers several utilities to<br>extract meaning from summary<br>statistics and distributions.
+			`
+		}, {
+			cat: 'cat3', name: 'readxl', value: 110,
+			icon: 'img/readxl.svg',
+			desc: `
+				Import excel files into R.
+			`
+		}, {
+			cat: 'cat10', name: 'reticulate', value: 95,
+			icon: 'img/reticulate.svg',
+			desc: `
+				Interface to Python.
+			`
+		}, {
+			cat: 'cat4', name: 'rlang', value: 70,
+			icon: 'img/rlang.svg',
+			desc: `
+				A collection of frameworks<br>and APIs for programming with R.
+			`
+		}, {
+			cat: 'cat5', name: 'rmarkdown', value: 100,
+			icon: 'img/rmarkdown.svg',
+			desc: `
+				Convert R Markdown documents<br>into a variety of formats.
+			`
+		}, {
+			cat: 'cat1', name: 'roxygen2', value: 70,
+			icon: 'img/roxygen2.svg',
+			desc: `
+				Generate your Rd documentation.
+			`
+		}, {
+			cat: 'cat4', name: 'rsconnect', value: 60,
+			icon: 'img/rsconnect.svg',
+			desc: `
+				An R package used for deploying<br>applications to Posit Connect,<br>ShinyApps.io, and Posit Cloud.
+			`
+		}, {
+			cat: 'cat5', name: 'RStudio', value: 200,
+			icon: 'img/RStudio.svg',
+			desc: `
+				RStudio is an integrated<br>development environment for R,<br>a programming language for<br>statistical computing and graphics.
+			`
+		}, {
+			cat: 'cat6', name: 'rvest', value: 80,
+			icon: 'img/rvest.svg',
+			desc: `
+				scrape information from web pages.
+			`
+		}, {
+			cat: 'cat10', name: 'scales', value: 100,
+			icon: 'img/scales.svg',
+			desc: `
+				Graphical scales map data<br>to aesthetics, and provide methods<br>for automatically determining<br>breaks and labels for axes and legends.
+			`
+		}, {
+			cat: 'cat2', name: 'shiny', value: 250,
+			icon: 'img/shiny.svg',
+			desc: `
+				Makes it easy to build interactive<br>web apps straight from R
+			`
+		}, {
+			cat: 'cat6', name: 'sparklyr', value: 30,
+			icon: 'img/sparklyr.svg',
+			desc: `
+				R interface to Apache Spark.
+			`
+		}, {
+			cat: 'cat5', name: 'stringr', value: 70,
+			icon: 'img/stringr.svg',
+			desc: `
+				Handling strings in R.
+			`
+		}, {
+			cat: 'cat4', name: 'tensorflow', value: 50,
+			icon: 'img/tensorflow.svg',
+			desc: `
+				Build and train deep learning models.
+			`
+		}, {
+			cat: 'cat9', name: 'testthat', value: 40,
+			icon: 'img/testthat.svg',
+			desc: `
+				A testing framework for R.
+			`
+		}, {
+			cat: 'cat6', name: 'tibble', value: 30,
+			icon: 'img/tibble.svg',
+			desc: `
+				 Simple Data Frames.
+			`
+		}, {
+			cat: 'cat2', name: 'tidymodels', value: 50,
+			icon: 'img/tidymodels.svg',
+			desc: `
+				A collection of packages for<br>modeling and machine learning.
+			`
+		}, {
+			cat: 'cat10', name: 'tidyr', value: 80,
+			icon: 'img/tidyr.svg',
+			desc: `
+				Tools to help to create tidy data.
+			`
+		}, {
+			cat: 'cat8', name: 'tidyverse', value: 300,
+			icon: 'img/tidyverse.svg',
+			desc: `
+				A collection of R packages<br>designed for data science.
+			`
+		}, {
+			cat: 'cat1', name: 'usethis', value: 30,
+			icon: 'img/usethis.svg',
+			desc: `
+				A package that facilitates interactive<br>workflows for R project creation<br>and development
+			`
+		}, {
+			cat: 'cat9', name: 'sassy', value: 200,
+			icon: 'img/sassy.png',
+			desc: `
+				A meta-package that aims to<br>make R easier for everyone,<br>especially programmers who have<br>a background in SAS.
+			`
+		}, {
+			cat: 'cat11', name: 'admiral', value: 100,
+			icon: 'img/admiral.png',
+			desc: `
+				A toolbox for programming Clinical<br>Data Interchange Standards<br>Consortium (CDISC) compliant<br>Analysis Data Model (ADaM)<br>datasets in R.
+			`
+		} , {
+			cat: 'cat8', name: 'patchwork', value: 150,
+			icon: 'img/patchwork.png',
+			desc: `
+				A package designed to make<br>plot composition in R.
+			`
+		}, /*{
+			cat: 'workflow', name: 'Browserify', value: 10,
+			icon: '',
+		},*/ {
+			cat: 'cat7', name: 'cowplot', value: 90,
+			icon: 'img/cowplot.png',
+			desc: `
+				Provides various features that<br>help with creating<br>publication-quality figures<br>with ggplot2.
+			`
+		}, {
+			name: 'finetune', value: 30,
+			icon: 'img/finetune.svg',
+			desc: `
+				Enhances the tune package<br>by providing more specialized<br>methods for finding reasonable<br>values of model tuning parameters.
+			`
+		}, {
+			cat: 'cat3', name: 'plotly', value: 200,
+			icon: 'img/plotly.png',
+			desc: `
+				Creates interactive<br>web-based graphs.
+			`
+		}, {
+			cat: 'cat9', name: 'bookdown', value: 70,
+			icon: 'img/bookdown.svg',
+			desc: `
+				Facilitates writing books and<br>long-form articles/reports with<br>R Markdown.
+			`
+		}, {
+			cat: 'cat5', name: 'dbplyr', value: 50,
+			icon: 'img/dbplyr.svg',
+			desc: `
+				The DBI package provides<br>a common interface that allows<br>dplyr to work with many different<br>databases using the same code.
+			`
+		}, {
+			cat: 'cat6', name: 'dtplyr', value: 50,
+			icon: 'img/dtplyr.svg',
+			desc: `
+				Provides a data.table<br>backend for dplyr.
+			`
+		}, {
+			cat: 'cat7', name: 'fs', value: 40,
+			icon: 'img/fs.svg',
+			desc: `
+				Enables interacting with the<br>file system in a way modeled<br>on standard POSIX functions.
+			`
+		}, {
+			cat: 'cat8', name: 'lobstr', value: 20,
+			icon: 'img/lobstr.svg',
+			desc: `
+				A set of tools for inspecting<br>and understanding R data structures.
+			`
+		}, {
+			cat: 'cat7',  name: 'pagedown', value: 30,
+			icon: 'img/pagedown.svg',
+			desc: `
+				Create Paged HTML Documents<br>for Printing.
+			`
+		}, {
+			cat: 'cat9', name: 'pins', value: 20,
+			icon: 'img/pins.svg',
+			desc: `
+				Publish data sets, models,<br>and other R objects, making it<br>easy to share them across<br>projects and with your colleagues.
+			`
+		}, {
+			cat: 'cat8', name: 'pkgdown', value: 30,
+			icon: 'img/pkgdown.svg',
+			desc: `
+				Generate websites.
+			`
+		}, {
+			cat: 'cat7', name: 'reprex', value: 30,
+			icon: 'img/reprex.svg',
+			desc: `
+				Render small snippets of code<br>to target formats that include<br>both code and output.
+			`
+		}, {
+			cat: 'cat9', name: 'workflow', value: 50,
+			icon: 'img/workflows.svg',
+			desc: `
+				The goal of workflows is<br>to streamline this process<br>by bundling the model alongside<br>the preprocessor, all within<br>the same object.
+			`
+		}, {
+			cat: 'cat3', name: 'withr', value: 30,
+			icon: 'img/withr.svg',
+			desc: `
+				A set of functions to run<br>code with safely and temporarily<br>modified global state.
+			`
+		}, {
+			cat: 'cat7', name: 'yardstick', value: 40,
+			icon: 'img/yardstick.svg',
+			desc: `
+				Estimate how well models are<br>working using tidy data principles.
+			`
+		}, {
+			name: 'xaringan', value: 30,
+			icon: 'img/xaringan.svg',
+			desc: `
+				an R Markdown extension based<br>on the JavaScript library remark.js.
+			`
+		}, {
+			cat: 'cat8', name: 'dials', value: 50,
+			icon: 'img/dials.svg',
+			desc: `
+				Tools for Creating Tuning<br>Parameter Values.
+			`
+		}, {
+			cat: 'cat6', name: 'dsbox', value: 20,
+			icon: 'img/dsbox.svg',
+			desc: `
+				Supplement the Data Science<br>Course in a Box project
+			`
+		}];
+	</script>
+
+	<script>
+		let svg = d3.select('svg');
+		let width = document.body.clientWidth; // get width in pixels
+		let height = +svg.attr('height');
+		let centerX = width * 0.5;
+		let centerY = height * 0.5;
+		let strength = 0.05;
+		let focusedNode;
+
+		let format = d3.format(',d');
+
+		let scaleColor = d3.scaleOrdinal(d3.schemeCategory20);
+
+		// use pack to calculate radius of the circle
+		let pack = d3.pack()
+			.size([width , height ])
+			.padding(1.5);
+
+		let forceCollide = d3.forceCollide(d => d.r + 1);
+
+		// use the force
+		let simulation = d3.forceSimulation()
+			// .force('link', d3.forceLink().id(d => d.id))
+			.force('charge', d3.forceManyBody())
+			.force('collide', forceCollide)
+			// .force('center', d3.forceCenter(centerX, centerY))
+			.force('x', d3.forceX(centerX ).strength(strength))
+			.force('y', d3.forceY(centerY ).strength(strength));
+
+		// reduce number of circles on mobile screen due to slow computation
+		if ('matchMedia' in window && window.matchMedia('(max-device-width: 767px)').matches) {
+			data = data.filter(el => {
+				return el.value >= 50;
+			});
+		}
+
+		let root = d3.hierarchy({ children: data })
+			.sum(d => d.value);
+
+		// we use pack() to automatically calculate radius conveniently only
+		// and get only the leaves
+		let nodes = pack(root).leaves().map(node => {
+			console.log('node:', node.x, (node.x - centerX) * 2);
+			const data = node.data;
+			return {
+				x: centerX + (node.x - centerX) * 3, // magnify start position to have transition to center movement
+				y: centerY + (node.y - centerY) * 3,
+				r: 0, // for tweening
+				radius: node.r, //original radius
+				id: data.cat + '.' + (data.name.replace(/\s/g, '-')),
+				cat: data.cat,
+				name: data.name,
+				value: data.value,
+				icon: data.icon,
+				desc: data.desc,
+			}
+		});
+		simulation.nodes(nodes).on('tick', ticked);
+
+		//svg.style('background-color', '#eee');
+		svg.style('background-color', '#FFFFFF');
+			
+		let node = svg.selectAll('.node')
+			.data(nodes)
+			.enter().append('g')
+			.attr('class', 'node')
+			.call(d3.drag()
+				.on('start', (d) => {
+					if (!d3.event.active) simulation.alphaTarget(0.2).restart();
+					d.fx = d.x;
+					d.fy = d.y;
+				})
+				.on('drag', (d) => {
+					d.fx = d3.event.x;
+					d.fy = d3.event.y;
+				})
+				.on('end', (d) => {
+					if (!d3.event.active) simulation.alphaTarget(0);
+					d.fx = null;
+					d.fy = null;
+				}));
+
+		node.append('circle')
+			.attr('id', d => d.id)
+			.attr('r', 0)
+			.style('fill', d => scaleColor(d.cat))
+			.transition().duration(2000).ease(d3.easeElasticOut)
+				.tween('circleIn', (d) => {
+					let i = d3.interpolateNumber(0, d.radius);
+					return (t) => {
+						d.r = i(t);
+						simulation.force('collide', forceCollide);
+					}
+				})
+
+		node.append('clipPath')
+			.attr('id', d => `clip-${d.id}`)
+			.append('use')
+			.attr('xlink:href', d => `#${d.id}`);
+
+		// display text as circle icon
+		node.filter(d => !String(d.icon).includes('img/'))
+			.append('text')
+			.classed('node-icon', true)
+			.attr('clip-path', d => `url(#clip-${d.id})`)
+			.selectAll('tspan')
+			.data(d => d.icon.split(';'))
+			.enter()
+				.append('tspan')
+				.attr('x', 0)
+				.attr('y', (d, i, nodes) => (13 + (i - nodes.length / 2 - 0.5) * 10))
+				.text(name => name);
+
+		// display image as circle icon
+		node.filter(d => String(d.icon).includes('img/'))
+			.append('image')
+			.classed('node-icon', true)
+			.attr('clip-path', d => `url(#clip-${d.id})`)
+			.attr('xlink:href', d => d.icon)
+			.attr('x', d => - d.radius * 0.7)
+			.attr('y', d => - d.radius * 0.7)
+			.attr('height', d => d.radius * 2 * 0.7)
+			.attr('width', d => d.radius * 2 * 0.7)
+
+		node.append('title')
+			.text(d => (d.cat + '::' + d.name + '\n' + format(d.value)));
+
+	//	let legendOrdinal = d3.legendColor()
+	//		.scale(scaleColor)
+	//		.shape('circle');
+
+	//	let legend = svg.append('g')
+	//		.classed('legend-color', true)
+//			.attr('text-anchor', 'start')
+	//		.attr('transform','translate(20,30)')
+	//		.style('font-size','12px')
+	//		.call(legendOrdinal);
+
+	//	let sizeScale = d3.scaleOrdinal()
+  	//		.domain(['less use', 'more use'])
+  	//		.range([5, 10] );
+
+	//	let legendSize = d3.legendSize()
+	//		.scale(sizeScale)
+	//		.shape('circle')
+	//		.shapePadding(10)
+	//		.labelAlign('end');
+
+	//	let legend2 = svg.append('g')
+	//		.classed('legend-size', true)
+	//		.attr('text-anchor', 'start')
+	//		.attr('transform', 'translate(150, 25)')
+	//		.style('font-size', '12px')
+	//		.call(legendSize);
+
+
+		/*
+		<foreignObject class="circle-overlay" x="10" y="10" width="100" height="150">
+			<div class="circle-overlay__inner">
+				<h2 class="circle-overlay__title">ReactJS</h2>
+				<p class="circle-overlay__body">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Ullam, sunt, aspernatur. Autem repudiandae, laboriosam. Nulla quidem nihil aperiam dolorem repellendus pariatur, quaerat sed eligendi inventore ipsa natus fugiat soluta doloremque!</p>
+			</div>
+		</foreignObject>
+		*/
+		let infoBox = node.append('foreignObject')
+			.classed('circle-overlay hidden', true)
+			.attr('x', -350 * 0.5 * 0.8)
+			.attr('y', -350 * 0.5 * 0.8)
+			.attr('height', 350 * 0.8)
+			.attr('width', 350 * 0.8)
+				.append('xhtml:div')
+				.classed('circle-overlay__inner', true);
+
+		infoBox.append('h2')
+			.classed('circle-overlay__title', true)
+			.text(d => d.name);
+
+		infoBox.append('p')
+			.classed('circle-overlay__body', true)
+			.html(d => d.desc);
+
+
+		node.on('click', (currentNode) => {
+			d3.event.stopPropagation();
+			console.log('currentNode', currentNode);
+			let currentTarget = d3.event.currentTarget; // the <g> el
+
+			if (currentNode === focusedNode) {
+				// no focusedNode or same focused node is clicked
+				return;
+			}
+			let lastNode = focusedNode;
+			focusedNode = currentNode;
+
+			simulation.alphaTarget(0.2).restart();
+			// hide all circle-overlay
+			d3.selectAll('.circle-overlay').classed('hidden', true);
+			d3.selectAll('.node-icon').classed('node-icon--faded', false);
+
+			// don't fix last node to center anymore
+			if (lastNode) {
+				lastNode.fx = null;
+				lastNode.fy = null;
+				node.filter((d, i) => i === lastNode.index)
+					.transition().duration(2000).ease(d3.easePolyOut)
+					.tween('circleOut', () => {
+						let irl = d3.interpolateNumber(lastNode.r, lastNode.radius);
+						return (t) => {
+							lastNode.r = irl(t);
+						}
+					})
+					.on('interrupt', () => {
+						lastNode.r = lastNode.radius;
+					});
+			}
+
+			// if (!d3.event.active) simulation.alphaTarget(0.5).restart();
+
+			d3.transition().duration(2000).ease(d3.easePolyOut)
+				.tween('moveIn', () => {
+					console.log('tweenMoveIn', currentNode);
+					let ix = d3.interpolateNumber(currentNode.x, centerX);
+					let iy = d3.interpolateNumber(currentNode.y, centerY);
+					let ir = d3.interpolateNumber(currentNode.r, centerY * 0.5);
+					return function (t) {
+						// console.log('i', ix(t), iy(t));
+						currentNode.fx = ix(t);
+						currentNode.fy = iy(t);
+						currentNode.r = ir(t);
+						simulation.force('collide', forceCollide);
+					};
+				})
+				.on('end', () => {
+					simulation.alphaTarget(0);
+					let $currentGroup = d3.select(currentTarget);
+					$currentGroup.select('.circle-overlay')
+						.classed('hidden', false);
+					$currentGroup.select('.node-icon')
+						.classed('node-icon--faded', true);
+
+				})
+				.on('interrupt', () => {
+					console.log('move interrupt', currentNode);
+					currentNode.fx = null;
+					currentNode.fy = null;
+					simulation.alphaTarget(0);
+				});
+
+		});
+
+		// blur
+		d3.select(document).on('click', () => {
+			let target = d3.event.target;
+			// check if click on document but not on the circle overlay
+			if (!target.closest('#circle-overlay') && focusedNode) {
+				focusedNode.fx = null;
+				focusedNode.fy = null;
+				simulation.alphaTarget(0.2).restart();
+				d3.transition().duration(2000).ease(d3.easePolyOut)
+					.tween('moveOut', function () {
+						console.log('tweenMoveOut', focusedNode);
+						let ir = d3.interpolateNumber(focusedNode.r, focusedNode.radius);
+						return function (t) {
+							focusedNode.r = ir(t);
+							simulation.force('collide', forceCollide);
+						};
+					})
+					.on('end', () => {
+						focusedNode = null;
+						simulation.alphaTarget(0);
+					})
+					.on('interrupt', () => {
+						simulation.alphaTarget(0);
+					});
+
+				// hide all circle-overlay
+				d3.selectAll('.circle-overlay').classed('hidden', true);
+				d3.selectAll('.node-icon').classed('node-icon--faded', false);
+			}
+		});
+
+		function ticked() {
+			node
+				.attr('transform', d => `translate(${d.x},${d.y})`)
+				.select('circle')
+					.attr('r', d => d.r);
+		}
+	</script>
+</body>
+</html>
